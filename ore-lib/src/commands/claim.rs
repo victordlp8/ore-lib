@@ -12,7 +12,7 @@ use crate::{
     pool::Pool,
     send_and_confirm::ComputeBudget,
     utils::{amount_f64_to_u64, ask_confirm, get_proof_with_authority},
-    Miner,
+    miner::Miner,
 };
 
 impl Miner {

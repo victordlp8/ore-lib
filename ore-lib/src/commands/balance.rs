@@ -6,7 +6,7 @@ use solana_sdk::signature::Signer;
 use crate::{
     args::BalanceArgs,
     utils::{amount_u64_to_string, get_proof_with_authority},
-    Miner,
+    miner::Miner,
 };
 
 impl Miner {

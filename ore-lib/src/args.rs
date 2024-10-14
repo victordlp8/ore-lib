@@ -58,7 +58,7 @@ pub struct ConfigArgs {}
 #[derive(Parser, Debug)]
 pub struct InitializeArgs {}
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 pub struct MineArgs {
     #[arg(
         long,

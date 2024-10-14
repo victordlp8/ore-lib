@@ -3,10 +3,11 @@ use solana_sdk::{pubkey::Pubkey, signer::Signer};
 use spl_token::amount_to_ui_amount;
 
 use crate::{
+    args::UpgradeArgs,
     cu_limits::CU_LIMIT_UPGRADE,
+    miner::Miner,
     send_and_confirm::ComputeBudget,
     utils::{amount_f64_to_u64_v1, ask_confirm},
-    Miner, UpgradeArgs,
 };
 
 impl Miner {

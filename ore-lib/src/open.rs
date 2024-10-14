@@ -1,6 +1,6 @@
 use solana_sdk::signature::Signer;
 
-use crate::{send_and_confirm::ComputeBudget, utils::proof_pubkey, Miner};
+use crate::{send_and_confirm::ComputeBudget, utils::proof_pubkey, miner::Miner};
 
 impl Miner {
     pub async fn open(&self) {

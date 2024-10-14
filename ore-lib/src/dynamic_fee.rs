@@ -1,4 +1,4 @@
-use crate::Miner;
+use crate::miner::Miner;
 
 use ore_api::consts::BUS_ADDRESSES;
 use reqwest::Client;

@@ -11,7 +11,7 @@ use solana_sdk::{
 };
 use steel::AccountDeserialize;
 
-use crate::{cu_limits::CU_LIMIT_CLAIM, error::Error, send_and_confirm::ComputeBudget, Miner};
+use crate::{cu_limits::CU_LIMIT_CLAIM, error::Error, send_and_confirm::ComputeBudget, miner::Miner};
 
 pub struct Pool {
     pub http_client: reqwest::Client,

@@ -10,14 +10,13 @@ repository = "https://github.com/regolith-labs/ore-cli"
 readme = "./README.md"
 keywords = ["solana", "crypto", "mining"]
 
-[[bin]]
-name = "ore"
-path = "src/main.rs"
-
 [lib]
 name = "ore_lib"
 path = "src/lib.rs"
-crate-type = ["cdylib"]
+
+[[bin]]
+name = "ore"
+path = "src/main.rs"
 
 [features]
 default = []
