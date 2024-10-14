@@ -1,0 +1,17 @@
+[package]
+name = "ore-jni-lib"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "ore_jni_lib"
+crate-type = ["cdylib"]
+
+[dependencies]
+ore-lib = { path = "../ore-lib" }
+jni = "0.21.1"
+
+[build-dependencies]
+cbindgen = "0.27.0"

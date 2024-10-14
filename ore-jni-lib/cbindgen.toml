@@ -1,0 +1,3 @@
+language = "C"
+header = "/* Automatically generated JNI bindings for ore-jni-lib */"
+include_guard = "ORE_JNI_LIB_H"

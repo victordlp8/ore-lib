@@ -1,25 +1,13 @@
+mod commands;
 mod args;
-mod balance;
-mod benchmark;
-mod busses;
-mod claim;
-mod close;
-mod config;
 mod cu_limits;
 mod dynamic_fee;
 mod error;
 #[cfg(feature = "admin")]
 mod initialize;
-mod mine;
 mod open;
 mod pool;
-mod proof;
-mod rewards;
 mod send_and_confirm;
-mod stake;
-mod transfer;
-mod unstake;
-mod upgrade;
 mod utils;
 
 use futures::StreamExt;
