@@ -13,5 +13,8 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
+# ore-jni-lib
+ore-jni-lib/ore_jni_lib.h
+
 # Custom
 output.log
