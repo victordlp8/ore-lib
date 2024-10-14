@@ -11,7 +11,7 @@ use ore_lib::args::MineArgs;
 use ore_lib::miner::Miner;
 use ore_lib::Manager;
 
-use crate::utils::{bool_unwrap, jni_transformer, string_unwrap, u64_unwrap};
+use crate::utils::string_unwrap;
 
 // #[no_mangle]
 // pub extern "system" fn JNI_OnLoad(vm: JavaVM, _reserved: *mut c_void) -> jint {
@@ -74,17 +74,17 @@ pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_startPoolMining(
     cores: jint,
     buffer_time: jint,
 ) -> jint {
-    let keypair_filepath = string_unwrap(jni_transformer(&mut env, &keypair_filepath.clone()));
-    let rpc_client = string_unwrap(jni_transformer(&mut env, &rpc_client.clone()));
-    let priority_fee = u64_unwrap(jni_transformer(&mut env, &priority_fee));
-    let dynamic_fee_url = string_unwrap(jni_transformer(&mut env, &dynamic_fee_url.clone()));
-    let dynamic_fee = bool_unwrap(jni_transformer(&mut env, &dynamic_fee));
-    let fee_payer_filepath = string_unwrap(jni_transformer(&mut env, &fee_payer_filepath.clone()));
-    let jito_client = string_unwrap(jni_transformer(&mut env, &jito_client.clone()));
-    let tip = u64_unwrap(jni_transformer(&mut env, &tip));
-    let pool_url = string_unwrap(jni_transformer(&mut env, &pool_url.clone()));
-    let cores = u64_unwrap(jni_transformer(&mut env, &cores));
-    let buffer_time = u64_unwrap(jni_transformer(&mut env, &buffer_time));
+    let keypair_filepath = string_unwrap(&mut env, keypair_filepath);
+    let rpc_client = string_unwrap(&mut env, rpc_client);
+    let priority_fee = priority_fee as u64;
+    let dynamic_fee_url = string_unwrap(&mut env, dynamic_fee_url);
+    let dynamic_fee = dynamic_fee != 0;
+    let fee_payer_filepath = string_unwrap(&mut env, fee_payer_filepath);
+    let jito_client = string_unwrap(&mut env, jito_client);
+    let tip = tip as u64;
+    let pool_url = string_unwrap(&mut env, pool_url);
+    let cores = cores as u64;
+    let buffer_time = buffer_time as u64;
 
     let _miner = Miner::new(
         Arc::new(RpcClient::new(rpc_client)),
