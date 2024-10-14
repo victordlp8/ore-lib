@@ -7,11 +7,15 @@ edition = "2021"
 
 [lib]
 name = "ore_jni_lib"
+path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
 ore-lib = { path = "../ore-lib" }
 jni = "0.21.1"
+tokio = "1.35.1"
+either = "1.13.0"
+solana-client = "^1.18"
 
 [build-dependencies]
 cbindgen = "0.27.0"
