@@ -2,6 +2,7 @@ use solana_client::nonblocking::rpc_client::RpcClient;
 use std::sync::Arc;
 use solana_sdk::signature::{read_keypair_file, Keypair};
 
+#[derive(Clone)]
 pub struct Miner {
     pub keypair_filepath: Option<String>,
     pub priority_fee: Option<u64>,

@@ -1,6 +1,7 @@
 mod utils;
 
 use solana_client::nonblocking::rpc_client::RpcClient;
+use tokio::runtime::Runtime;
 use std::sync::{Arc, RwLock};
 
 use jni::objects::{JClass, JString};
@@ -59,7 +60,7 @@ pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_helloRust(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_startPoolMining(
+pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_startMining(
     mut env: JNIEnv,
     _class: JClass,
     keypair_filepath: JString,
@@ -86,42 +87,65 @@ pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_startPoolMining(
     let cores = cores as u64;
     let buffer_time = buffer_time as u64;
 
-    let _miner = Miner::new(
-        Arc::new(RpcClient::new(rpc_client)),
+    let rpc_client = Arc::new(RpcClient::new(rpc_client));
+    let jito_client = Arc::new(RpcClient::new(jito_client));
+    let tip = Arc::new(RwLock::new(tip));
+
+    let miner = Miner::new(
+        rpc_client,
         Some(priority_fee),
         Some(keypair_filepath),
         Some(dynamic_fee_url),
         dynamic_fee,
         Some(fee_payer_filepath),
-        Arc::new(RpcClient::new(jito_client)),
-        Arc::new(RwLock::new(tip)),
+        jito_client,
+        tip,
     );
 
-    let _mining_args = MineArgs {
-        pool_url: Some(pool_url.clone()),
-        cores: cores,
-        buffer_time: buffer_time,
+    let mining_args = MineArgs {
+        pool_url: Some(pool_url),
+        cores,
+        buffer_time,
         boost_1: None,
         boost_2: None,
         boost_3: None,
     };
 
-    let manager = Manager::new(_miner, _mining_args);
+    let manager = Manager::new(miner, mining_args);
+    Manager::set_global_manager(manager);
+    let global_manager = Manager::get_global_manager();
 
-    // Since we can't make this function async, we'll use tokio's runtime to run the async code
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(async {
-        match manager.mine().await {
-            Ok(_) => {
-                // Mining completed successfully
-                println!("Mining operation completed successfully");
-                0 // Return success code
-            },
-            Err(e) => {
-                // An error occurred during mining
-                eprintln!("Error during mining: {:?}", e);
-                -1 // Return an error code
-            }
+    let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
+        let mut manager = global_manager.lock().await;
+        if let Err(e) = manager.start_mining() {
+            eprintln!("Error starting mining: {:?}", e);
+            -1
+        } else {
+            println!("ore-jni-lib: Mining started");
+            0
         }
-    })
+    });
+
+    result
+}
+
+#[no_mangle]
+pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_stopMining(
+    _env: JNIEnv,
+    _class: JClass,
+) -> jint {
+    let global_manager = Manager::get_global_manager();
+
+    let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
+        let manager = global_manager.lock().await;
+        if let Err(e) = manager.stop_mining() {
+            eprintln!("Error stopping mining: {:?}", e);
+            -1
+        } else {
+            println!("ore-jni-lib: Mining stopped");
+            0
+        }
+    });
+
+    result
 }

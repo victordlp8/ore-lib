@@ -59,6 +59,7 @@ steel = { version = "1.2.0" }
 thiserror = "1.0.63"
 tokio = "1.35.1"
 tokio-tungstenite = "0.16"
+lazy_static = "1.5.0"
 
 ## [patch.crates-io]
 ## ore-api = { path = "../ore/api" }

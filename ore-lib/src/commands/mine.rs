@@ -22,37 +22,35 @@ use solana_rpc_client::{nonblocking::rpc_client::RpcClient, spinner};
 use solana_sdk::signer::Signer;
 use spl_token::state::Mint;
 use steel::AccountDeserialize;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
-    args::MineArgs,
-    error::Error,
-    pool::Pool,
-    send_and_confirm::ComputeBudget,
-    utils::{
+    args::MineArgs, error::Error, pool::Pool, send_and_confirm::ComputeBudget, utils::{
         amount_u64_to_string, get_boost, get_clock, get_config, get_stake,
         get_updated_proof_with_authority, proof_pubkey,
-    },
-    Miner,
+    }, Miner
 };
 
 impl Miner {
-    pub async fn mine(&self, args: MineArgs) -> Result<(), Error> {
+    pub async fn mine(&self, args: MineArgs, is_mining: &Arc<AtomicBool>) -> Result<(), Error> {
+        println!("ore-lib: Let's go to the mines!");
+
         match args.pool_url {
             Some(ref pool_url) => {
                 let pool = &Pool {
                     http_client: reqwest::Client::new(),
                     pool_url: pool_url.clone(),
                 };
-                self.mine_pool(args, pool).await?;
+                self.mine_pool(args, pool, is_mining).await?;
             }
             None => {
-                self.mine_solo(args).await;
+                self.mine_solo(args, is_mining).await?;
             }
         }
         Ok(())
     }
 
-    async fn mine_solo(&self, args: MineArgs) {
+    async fn mine_solo(&self, args: MineArgs, is_mining: &Arc<AtomicBool>) -> Result<(), Error> {
         // Open account, if needed.
         let signer = self.signer();
         self.open().await;
@@ -71,7 +69,9 @@ impl Miner {
         // Start mining loop
         let mut last_hash_at = 0;
         let mut last_balance = 0;
-        loop {
+        println!("is_mining: {}", is_mining.load(Ordering::SeqCst));
+        while is_mining.load(Ordering::SeqCst) {
+            println!("Mining solo loop");
             // Fetch proof
             let config = get_config(&self.rpc_client).await;
             let proof =
@@ -116,6 +116,7 @@ impl Miner {
                 args.cores,
                 config.min_difficulty as u32,
                 nonce_indices.as_slice(),
+                &is_mining,
             )
             .await;
 
@@ -148,10 +149,16 @@ impl Miner {
             self.send_and_confirm(&ixs, ComputeBudget::Fixed(compute_budget), false)
                 .await
                 .ok();
+
+            if !is_mining.load(Ordering::SeqCst) {
+                break;
+            }
         }
+
+        Ok(())
     }
 
-    async fn mine_pool(&self, args: MineArgs, pool: &Pool) -> Result<(), Error> {
+    async fn mine_pool(&self, args: MineArgs, pool: &Pool, is_mining: &Arc<AtomicBool>) -> Result<(), Error> {
         // register, if needed
         let mut pool_member = pool.post_pool_register(self).await?;
         let nonce_index = pool_member.id as u64;
@@ -163,7 +170,9 @@ impl Miner {
         // Start mining loop
         let mut last_hash_at = 0;
         let mut last_balance: i64;
-        loop {
+        println!("is_mining: {}", is_mining.load(Ordering::SeqCst));
+        while is_mining.load(Ordering::SeqCst) {
+            println!("Mining pool loop");
             // Fetch latest challenge
             let member_challenge = pool.get_updated_pool_challenge(last_hash_at).await?;
             // Increment last balance and hash
@@ -188,6 +197,7 @@ impl Miner {
                 args.cores,
                 member_challenge.challenge.min_difficulty as u32,
                 nonce_indices.as_slice(),
+                &is_mining,
             )
             .await;
             // Post solution to operator
@@ -211,7 +221,13 @@ impl Miner {
                     )
                 )
             }
+
+            if !is_mining.load(Ordering::SeqCst) {
+                break;
+            }
         }
+
+        Ok(())
     }
 
     async fn find_hash_par(
@@ -220,6 +236,7 @@ impl Miner {
         cores: u64,
         min_difficulty: u32,
         nonce_indices: &[u64],
+        is_mining: &Arc<AtomicBool>,
     ) -> Solution {
         // Dispatch job to each thread
         let progress_bar = Arc::new(spinner::new_progress_bar());
@@ -230,6 +247,7 @@ impl Miner {
         let handles: Vec<_> = core_ids
             .map(|i| {
                 let global_best_difficulty = Arc::clone(&global_best_difficulty);
+                let is_mining = Arc::clone(&is_mining);
                 std::thread::spawn({
                     let progress_bar = progress_bar.clone();
                     let nonce = nonce_indices[i.id];
@@ -245,6 +263,11 @@ impl Miner {
                         let mut best_difficulty = 0;
                         let mut best_hash = Hash::default();
                         loop {
+                            println!("Find hash loop");
+                            if !is_mining.load(Ordering::SeqCst) {
+                                break;
+                            }
+
                             // Get hashes
                             let hxs = drillx::hashes_with_memory(
                                 &mut memory,
@@ -254,6 +277,9 @@ impl Miner {
 
                             // Look for best difficulty score in all hashes
                             for hx in hxs {
+                                if !is_mining.load(Ordering::SeqCst) {
+                                    break;
+                                }
                                 let difficulty = hx.difficulty();
                                 if difficulty.gt(&best_difficulty) {
                                     best_nonce = nonce;

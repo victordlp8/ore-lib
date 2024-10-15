@@ -14,7 +14,7 @@ mod miner;
 use futures::StreamExt;
 use miner::Miner;
 use pool::Pool;
-use std::{sync::Arc, sync::RwLock};
+use std::sync::{atomic::AtomicBool, Arc, RwLock};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::protocol::Message;
 
@@ -224,7 +224,7 @@ async fn main() {
             miner.config().await;
         }
         Commands::Mine(args) => {
-            if let Err(err) = miner.mine(args).await {
+            if let Err(err) = miner.mine(args, &Arc::new(AtomicBool::new(true))).await {
                 println!("{:?}", err);
             }
         }
