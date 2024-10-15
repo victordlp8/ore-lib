@@ -12,4 +12,8 @@ pub enum Error {
     SolanaProgram(#[from] solana_program::program_error::ProgramError),
     #[error("parse int")]
     ParseInt(#[from] std::num::ParseIntError),
+    #[error("already mining")]
+    AlreadyMining,
+    #[error("not mining")]
+    NotMining,
 }
