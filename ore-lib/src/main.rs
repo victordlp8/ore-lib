@@ -62,9 +62,6 @@ enum Commands {
     #[command(about = "Send ORE to anyone, anywhere in the world")]
     Transfer(TransferArgs),
 
-    #[command(about = "Unstake tokens")]
-    Unstake(UnstakeArgs),
-
     #[command(about = "Upgrade your ORE tokens from v1 to v2")]
     Upgrade(UpgradeArgs),
 
@@ -239,9 +236,6 @@ async fn main() {
         }
         Commands::Transfer(args) => {
             miner.transfer(args).await;
-        }
-        Commands::Unstake(args) => {
-            miner.unstake(args).await;
         }
         Commands::Upgrade(args) => {
             miner.upgrade(args).await;
