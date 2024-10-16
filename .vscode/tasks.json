@@ -1,0 +1,39 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Release build ore",
+			"type": "cargo",
+			"command": "build",
+			"args": [
+				"--release",
+				"--bin",
+				"ore"
+			],
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},
+		
+		{
+			"label": "build ore",
+			"type": "cargo",
+			"command": "build",
+			"args": [
+				"--bin",
+				"ore"
+			],
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}

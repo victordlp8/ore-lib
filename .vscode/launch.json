@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(Windows) Debug executable 'ore'",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/target/debug/ore.exe",
+            "args": [
+                "--keypair", "C:\\Users\\victo\\Documents\\GitHub\\ore-lib\\target\\test\\hades_wallet.json",
+                "--rpc", "https://mainnet.helius-rpc.com/?api-key=5274f7c7-cf96-45cc-a59b-3f3c9ad13cea",
+                "mine",
+                "-p", "https://official.ec1ipse.me",
+                "-c", "1"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "preLaunchTask": "build ore"
+        },
+    ]
+}
