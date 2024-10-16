@@ -37,6 +37,7 @@ impl Miner {
 
         match args.pool_url {
             Some(ref pool_url) => {
+                println!("ore-lib: Mining pool");
                 let pool = &Pool {
                     http_client: reqwest::Client::new(),
                     pool_url: pool_url.clone(),
@@ -44,6 +45,7 @@ impl Miner {
                 self.mine_pool(args, pool, is_mining).await?;
             }
             None => {
+                println!("ore-lib: Mining solo");
                 self.mine_solo(args, is_mining).await?;
             }
         }
@@ -165,6 +167,7 @@ impl Miner {
         // get on-chain pool accounts
         let pool_address = pool.get_pool_address().await?;
         let mut pool_member_onchain: ore_pool_api::state::Member;
+        println!("pool_address: {:?}", pool_address);
         // Check num threads
         self.check_num_cores(args.cores);
         // Start mining loop

@@ -16,6 +16,7 @@ use solana_sdk::{clock::Clock, hash::Hash};
 use spl_associated_token_account::get_associated_token_address;
 use steel::AccountDeserialize;
 use tokio::time::sleep;
+use tokio::net::TcpStream;
 
 pub const BLOCKHASH_QUERY_RETRIES: usize = 5;
 pub const BLOCKHASH_QUERY_DELAY: u64 = 500;
@@ -162,4 +163,18 @@ pub struct Tip {
     pub landed_tips_95th_percentile: f64,
     pub landed_tips_99th_percentile: f64,
     pub ema_landed_tips_50th_percentile: f64,
+}
+
+pub async fn test_internet_connection() -> bool {
+    println!("Starting internet connection test");
+    match TcpStream::connect("8.8.8.8:53").await {
+        Ok(_) => {
+            println!("Internet connection test successful");
+            true
+        }
+        Err(e) => {
+            println!("Internet connection test failed: {:?}", e);
+            false
+        }
+    }
 }

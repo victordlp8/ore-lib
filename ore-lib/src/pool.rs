@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use std::time::Instant;
+use tokio::time::Duration;
 
 use drillx::Solution;
 use ore_pool_types::{
@@ -11,7 +13,7 @@ use solana_sdk::{
 };
 use steel::AccountDeserialize;
 
-use crate::{cu_limits::CU_LIMIT_CLAIM, error::Error, send_and_confirm::ComputeBudget, miner::Miner};
+use crate::{cu_limits::CU_LIMIT_CLAIM, error::Error, send_and_confirm::ComputeBudget, miner::Miner, utils::test_internet_connection};
 
 pub struct Pool {
     pub http_client: reqwest::Client,
@@ -20,6 +22,7 @@ pub struct Pool {
 
 impl Pool {
     pub async fn post_pool_register(&self, miner: &Miner) -> Result<Member, Error> {
+        println!("post_pool_register");
         let pubkey = miner.signer().pubkey();
         let post_url = format!("{}/register", self.pool_url);
         // check if on-chain member account exists already
@@ -85,15 +88,59 @@ impl Pool {
     }
 
     pub async fn get_pool_address(&self) -> Result<PoolAddress, Error> {
+        println!("Entering get_pool_address");
         let get_url = format!("{}/pool-address", self.pool_url);
-        let resp = self.http_client.get(get_url).send().await?;
-        match resp.error_for_status() {
-            Err(err) => {
-                println!("{:?}", err);
-                Err(err).map_err(From::from)
+        println!("get_url: {}", get_url);
+
+        let start_time = Instant::now();
+        let timeout_duration = Duration::from_secs(60);
+        let retry_delay = Duration::from_secs(5);
+
+        while start_time.elapsed() < timeout_duration {
+            println!("Testing internet connection...");
+            match test_internet_connection().await {
+                true => println!("Internet connection test passed"),
+                false => {
+                    println!("No internet connection. Retrying in {} seconds", retry_delay.as_secs());
+                    tokio::time::sleep(retry_delay).await;
+                    continue;
+                }
             }
-            Ok(resp) => resp.json::<PoolAddress>().await.map_err(From::from),
+
+            println!("Sending GET request");
+            match self.http_client.get(&get_url).timeout(Duration::from_secs(10)).send().await {
+                Ok(response) => {
+                    println!("Request successful, response: {:?}", response);
+                    return match response.error_for_status() {
+                        Ok(resp) => {
+                            println!("Parsing response as JSON");
+                            let result = resp.json::<PoolAddress>().await;
+                            println!("JSON parsing result: {:?}", result);
+                            result.map_err(|e| Error::Internal(format!("Failed to parse JSON: {}", e)))
+                        }
+                        Err(err) => {
+                            println!("Error in response status: {:?}", err);
+                            Err(Error::Internal(format!("HTTP error: {}", err)))
+                        }
+                    };
+                }
+                Err(e) => {
+                    println!("Error sending request: {:?}", e);
+                    if e.is_timeout() {
+                        println!("Request timed out, retrying...");
+                    } else if e.is_connect() {
+                        println!("Connection error, retrying...");
+                    } else {
+                        return Err(Error::Internal(format!("Failed to send request: {}", e)));
+                    }
+                }
+            }
+
+            println!("Retrying in {} seconds", retry_delay.as_secs());
+            tokio::time::sleep(retry_delay).await;
         }
+
+        Err(Error::Internal("Timeout reached while trying to get pool address".to_string()))
     }
 
     pub async fn get_pool_member_onchain(
