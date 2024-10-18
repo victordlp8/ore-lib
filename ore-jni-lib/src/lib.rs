@@ -3,6 +3,7 @@ mod utils;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use tokio::runtime::Runtime;
 use std::sync::{Arc, RwLock};
+use std::panic::{self, AssertUnwindSafe};
 
 use jni::objects::{JClass, JString};
 use jni::sys::{jboolean, jint, jstring};
@@ -12,7 +13,7 @@ use ore_lib::args::MineArgs;
 use ore_lib::miner::Miner;
 use ore_lib::Manager;
 
-use crate::utils::string_unwrap;
+use crate::utils::{string_unwrap, throw_java_exception};
 
 // #[no_mangle]
 // pub extern "system" fn JNI_OnLoad(vm: JavaVM, _reserved: *mut c_void) -> jint {
@@ -53,7 +54,14 @@ pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_helloRust(
         .get_string(&name)
         .expect("Couldn't get Java string!")
         .into();
-    let greeting = format!("Hello, I am {} the happy rustacean!", name);
+
+    let rt = Runtime::new().expect("Failed to create Tokio runtime");
+
+    let greeting = rt.block_on(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        format!("Hello, I am {} the happy rustacean!", name)
+    });
+
     env.new_string(greeting)
         .expect("Couldn't create Java string!")
         .into_raw()
@@ -117,12 +125,16 @@ pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_startMining(
 
     let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
         let mut manager = global_manager.lock().await;
-        if let Err(e) = manager.start_mining() {
-            eprintln!("Error starting mining: {:?}", e);
-            -1
-        } else {
-            println!("ore-jni-lib: Mining started");
-            0
+        match manager.start_mining() {
+            Ok(_) => {
+                println!("ore-jni-lib: Mining started");
+                0
+            }
+            Err(e) => {
+                let error_msg = format!("Error starting mining: {:?}", e);
+                throw_java_exception(&mut env, "java/lang/RuntimeException", &error_msg);
+                -1
+            }
         }
     });
 
@@ -131,21 +143,40 @@ pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_startMining(
 
 #[no_mangle]
 pub extern "system" fn Java_industries_dlp8_rust_OreJNILib_stopMining(
-    _env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
 ) -> jint {
-    let global_manager = Manager::get_global_manager();
+    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+        let global_manager = Manager::get_global_manager();
 
-    let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
-        let manager = global_manager.lock().await;
-        if let Err(e) = manager.stop_mining() {
-            eprintln!("Error stopping mining: {:?}", e);
-            -1
-        } else {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let manager = global_manager.lock().await;
+            manager.stop_mining()
+        })
+    }));
+
+    match result {
+        Ok(Ok(_)) => {
             println!("ore-jni-lib: Mining stopped");
             0
         }
-    });
-
-    result
+        Ok(Err(e)) => {
+            let error_msg = format!("Error stopping mining: {:?}", e);
+            eprintln!("{}", error_msg);
+            throw_java_exception(&mut env, "java/lang/RuntimeException", &error_msg);
+            -1
+        }
+        Err(panic_error) => {
+            let error_msg = if let Some(s) = panic_error.downcast_ref::<String>() {
+                s.clone()
+            } else if let Some(s) = panic_error.downcast_ref::<&str>() {
+                s.to_string()
+            } else {
+                "Unknown panic occurred".to_string()
+            };
+            eprintln!("Panic occurred: {}", error_msg);
+            throw_java_exception(&mut env, "java/lang/RuntimeException", &error_msg);
+            -1
+        }
+    }
 }
