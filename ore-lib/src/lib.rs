@@ -16,6 +16,7 @@ use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::mpsc;
+use online::check;
 
 use args::MineArgs;
 use error::Error;
@@ -76,6 +77,8 @@ impl Manager {
     }
 
     pub fn new(miner: Miner, mining_args: MineArgs) -> Self {
+        println!("Online? {}", check(None).is_ok());
+
         let (stop_sender, _) = mpsc::channel(1);
         Manager {
             miner,

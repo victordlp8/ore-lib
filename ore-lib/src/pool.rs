@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::time::Duration;
+use online::tokio::check;
 
 use drillx::Solution;
 use ore_pool_types::{
@@ -89,6 +90,7 @@ impl Pool {
 
     pub async fn get_pool_address(&self) -> Result<PoolAddress, Error> {
         println!("Entering get_pool_address");
+        println!("Online? {}", check(Some(3)).await.is_ok());
         let get_url = format!("{}/pool-address", self.pool_url);
         println!("get_url: {}", get_url);
 
